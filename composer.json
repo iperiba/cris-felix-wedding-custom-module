@@ -1,0 +1,15 @@
+{
+    "name": "iperez/cris_felix_wedding_custom_module",
+    "autoload": {
+        "psr-4": {
+            "CrisFelixWeddingCustomModule\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Ignacio Perez Ibanez",
+            "email": "iperiba@gmail.com"
+        }
+    ],
+    "require": {}
+}
