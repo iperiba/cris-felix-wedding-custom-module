@@ -32,7 +32,7 @@ class Guest implements GuestInterface
 	 * @param string $special_requirements
 	 * @param string $spotify_song
 	 */
-	public function __construct($guest_name, $surname, $nid, $phone, array $days, upper_age, $menu_type, $allergens, array $extra_service, $special_requirements, $spotify_song)
+	public function __construct($guest_name, $surname, $nid, $phone, array $days, bool $upper_age, $menu_type, $allergens, array $extra_service, $special_requirements, $spotify_song)
 	{
 		$this->guest_name = $guest_name;
 		$this->surname = $surname;
