@@ -14,17 +14,20 @@
 
 // Your code starts here.
 
-require_once(plugin_dir_path(__FILE__) . '/vendor/autoload.php');
-require_once(plugin_dir_path(__FILE__) . '/src/Loader.php');
+require_once(plugin_dir_path(__FILE__) . 'vendor/autoload.php');
 
-use CrisFelixWeddingCustomModule\src\Loader;
+use CrisFelixWeddingCustomModule\Loader;
+use CrisFelixWeddingCustomModule\Actions\Implementations\Obtainer;
 
 /*
     Prevent the email sending step for specific form
 */
 add_action("wpcf7_before_send_mail", "wpcf7_do_something_else");
 function wpcf7_do_something_else($cf7) {
-	Loader::loadCustomGuestType();
+    $prueba = plugin_dir_path(__FILE__);
+    $obtainer = new Obtainer();
+    $loader = new Loader($obtainer);
+	$loader->loadCustomGuestType();
 }
 
 

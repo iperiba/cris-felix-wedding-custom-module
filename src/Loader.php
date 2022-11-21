@@ -1,11 +1,24 @@
 <?php
 
-namespace CrisFelixWeddingCustomModule\src;
+namespace CrisFelixWeddingCustomModule;
+
+use CrisFelixWeddingCustomModule\Actions\Implementations\Obtainer;
 
 class Loader
 {
-	public static function loadCustomGuestType() {
-		$prueba = "prueba";
+    private $obtainer;
+
+    /**
+     * Loader constructor.
+     * @param Obtainer $obtainer
+     */
+    public function __construct(Obtainer $obtainer)
+    {
+        $this->obtainer = $obtainer;
+    }
+
+    public function loadCustomGuestType() {
+		$arrayFromPost = $this->obtainer->obtainArrayFromPostPetition();
 	}
 }
 

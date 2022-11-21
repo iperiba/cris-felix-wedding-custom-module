@@ -6,12 +6,12 @@ use CrisFelixWeddingCustomModule\Entities\Interfaces\GuestInterface;
 
 class Guest implements GuestInterface
 {
-	private string $name;
+	private string $guest_name;
 	private string $surname;
 	private string $nid;
 	private string $phone;
 	private array $days;
-	private bool $under_age;
+	private bool $upper_age;
 	private string $menu_type;
 	private string $allergens;
 	private array $extra_service;
@@ -20,26 +20,26 @@ class Guest implements GuestInterface
 
 	/**
 	 * Guess constructor.
-	 * @param string $name
+	 * @param string $guest_name
 	 * @param string $surname
 	 * @param string $nid
 	 * @param string $phone
 	 * @param array $days
-	 * @param bool $under_age
+	 * @param bool upper_age
 	 * @param string $menu_type
 	 * @param string $allergens
 	 * @param array $extra_service
 	 * @param string $special_requirements
 	 * @param string $spotify_song
 	 */
-	public function __construct($name, $surname, $nid, $phone, array $days, $under_age, $menu_type, $allergens, array $extra_service, $special_requirements, $spotify_song)
+	public function __construct($guest_name, $surname, $nid, $phone, array $days, upper_age, $menu_type, $allergens, array $extra_service, $special_requirements, $spotify_song)
 	{
-		$this->name = $name;
+		$this->guest_name = $guest_name;
 		$this->surname = $surname;
 		$this->nid = $nid;
 		$this->phone = $phone;
 		$this->days = $days;
-		$this->under_age = $under_age;
+		$this->upper_age = $upper_age;
 		$this->menu_type = $menu_type;
 		$this->allergens = $allergens;
 		$this->extra_service = $extra_service;
@@ -47,21 +47,21 @@ class Guest implements GuestInterface
 		$this->spotify_song = $spotify_song;
 	}
 
-	/**
-	 * @return string
-	 */
-	public function getName()
-	{
-		return $this->name;
-	}
+    /**
+     * @return string
+     */
+    public function getGuestName()
+    {
+        return $this->guest_name;
+    }
 
-	/**
-	 * @param string $name
-	 */
-	public function setName($name)
-	{
-		$this->name = $name;
-	}
+    /**
+     * @param string $guest_name
+     */
+    public function setGuestName($guest_name)
+    {
+        $this->guest_name = $guest_name;
+    }
 
 	/**
 	 * @return string
@@ -130,17 +130,17 @@ class Guest implements GuestInterface
 	/**
 	 * @return bool
 	 */
-	public function isUnderAge()
+	public function isUpperAge()
 	{
-		return $this->under_age;
+		return $this->upper_age;
 	}
 
 	/**
-	 * @param bool $under_age
+	 * @param bool $upper_age
 	 */
-	public function setUnderAge($under_age)
+	public function setUpperAge($upper_age)
 	{
-		$this->under_age = $under_age;
+		$this->upper_age = $upper_age;
 	}
 
 	/**
