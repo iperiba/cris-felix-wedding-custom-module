@@ -3,23 +3,21 @@
 namespace CrisFelixWeddingCustomModule;
 
 use CrisFelixWeddingCustomModule\Actions\Implementations\Obtainer;
+use CrisFelixWeddingCustomModule\Actions\Implementations\EntityGenerator;
+use CrisFelixWeddingCustomModule\Actions\Implementations\GuestUploader;
 
 class Loader
 {
-    private $obtainer;
-
-    /**
-     * Loader constructor.
-     * @param Obtainer $obtainer
-     */
-    public function __construct(Obtainer $obtainer)
-    {
-        $this->obtainer = $obtainer;
+    public static function loadCustomGuestType() {
+        try {
+            if (!empty($arrayFromPost = Obtainer::obtainArrayFromPostPetition())) {
+                $guestEntity = EntityGenerator::generateGuestEntity($arrayFromPost);
+                GuestUploader::uploadGuest($guestEntity);
+            }
+        } catch (\Exception $e) {
+            throw new \Exception($e->getMessage());
+        }
     }
-
-    public function loadCustomGuestType() {
-		$arrayFromPost = $this->obtainer->obtainArrayFromPostPetition();
-	}
 }
 
 

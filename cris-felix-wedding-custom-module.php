@@ -24,11 +24,47 @@ use CrisFelixWeddingCustomModule\Actions\Implementations\Obtainer;
 */
 add_action("wpcf7_before_send_mail", "wpcf7_do_something_else");
 function wpcf7_do_something_else($cf7) {
-    $prueba = plugin_dir_path(__FILE__);
-    $obtainer = new Obtainer();
-    $loader = new Loader($obtainer);
-	$loader->loadCustomGuestType();
+    try {
+        Loader::loadCustomGuestType();
+    } catch (Exception $e) {
+        error_log($e->getMessage(), 0);
+    }
 }
 
+function custom_columns($columns)
+{
+    unset($columns['title']);
+    unset($columns['date']);
+    return array_merge(
+        $columns,
+        array(
+            'name' => __('name'),
+            'surname' => __('surname'),
+            'nid' => __('nid'),
+            'email' => __('email'),
+            'phone' => __('phone'),
+            'days' => __('days'),
+            'upper_age' => __('upper_age'),
+            'menu_type' => __('menu_type'),
+            'extra_service' => __('extra_service')
+        )
+    );
+}
+add_filter('manage_guest_posts_columns', 'custom_columns');
 
+function display_custom_columns($column, $post_id)
+{
+    switch ($column) {
+        case 'name':
+            echo get_post_meta($post_id, 'name', true);
+            break;
+        case 'two':
+            echo get_post_meta($post_id, 'two', true);
+            break;
+        case 'three':
+            echo get_post_meta($post_id, 'three', true);
+            break;
+    }
+}
+add_action('manage_test_posts_custom_column', 'display_custom_columns', 10, 2);
 
