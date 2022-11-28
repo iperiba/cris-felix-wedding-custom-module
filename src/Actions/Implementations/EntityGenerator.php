@@ -3,7 +3,6 @@
 namespace CrisFelixWeddingCustomModule\Actions\Implementations;
 
 use CrisFelixWeddingCustomModule\Entities\Implementations\Guest;
-use CrisFelixWeddingCustomModule\Entities\Interfaces\GuestInterface;
 
 class EntityGenerator
 {

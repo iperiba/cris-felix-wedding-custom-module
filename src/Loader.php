@@ -8,7 +8,8 @@ use CrisFelixWeddingCustomModule\Actions\Implementations\GuestUploader;
 
 class Loader
 {
-    public static function loadCustomGuestType() {
+    public static function loadCustomGuestType()
+    {
         try {
             if (!empty($arrayFromPost = Obtainer::obtainArrayFromPostPetition())) {
                 $guestEntity = EntityGenerator::generateGuestEntity($arrayFromPost);

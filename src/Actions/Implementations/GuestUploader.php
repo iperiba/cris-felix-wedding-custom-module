@@ -12,10 +12,11 @@ class GuestUploader
 
     public static function uploadGuest(GuestInterface $guestEntity): GuestInterface
     {
-        $post_id = wp_insert_post(array (
+        $post_id = wp_insert_post(array(
             'post_type' => self::POST_TYPE,
             'post_status' => self::POST_STATUS,
             'post_author' => self::POST_AUTHOR,
+            'post_title' => ucfirst($guestEntity->getGuestName()). " " . ucfirst($guestEntity->getSurname())
         ));
 
         if ($post_id) {
