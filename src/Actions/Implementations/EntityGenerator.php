@@ -6,7 +6,14 @@ use CrisFelixWeddingCustomModule\Entities\Implementations\Guest;
 
 class EntityGenerator
 {
-    public static function generateGuestEntity(array $postArray)
+    private $logger;
+
+    public function __construct($logger)
+    {
+        $this->logger = $logger;
+    }
+
+    public function generateGuestEntity(array $postArray)
     {
         return new Guest(
             $postArray["guest_name"],

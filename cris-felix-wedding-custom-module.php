@@ -18,20 +18,75 @@ require_once(plugin_dir_path(__FILE__) . 'vendor/autoload.php');
 
 use CrisFelixWeddingCustomModule\Loader;
 use CrisFelixWeddingCustomModule\Actions\Implementations\Obtainer;
+use CrisFelixWeddingCustomModule\Actions\Implementations\Checker;
+use CrisFelixWeddingCustomModule\Actions\Implementations\EntityGenerator;
+use CrisFelixWeddingCustomModule\Actions\Implementations\GuestUploader;
+use CrisFelixWeddingCustomModule\Actions\Implementations\SendMailDatabaseGestor;
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
+use Monolog\Handler\FirePHPHandler;
 
-/*
-    Prevent the email sending step for specific form
-*/
+global $cris_felix_wedding_db_version;
+$cris_felix_wedding_db_version = '1.0';
+
+function crisFelixWedding_install() {
+    global $wpdb;
+    global $cris_felix_wedding_db_version;
+
+    $table_name = $wpdb->prefix . 'send_email';
+
+    $charset_collate = $wpdb->get_charset_collate();
+
+    $sql = "CREATE TABLE $table_name (
+		id mediumint(9) unsigned NOT NULL AUTO_INCREMENT,
+		form_instance_hash varchar(40) NOT NULL,
+		send_email BOOLEAN NOT NULL DEFAULT 1,
+		PRIMARY KEY  (id)
+	) $charset_collate;";
+
+    require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+    dbDelta( $sql );
+
+    add_option( 'cris_felix_wedding_db_version', $cris_felix_wedding_db_version );
+}
+
+register_activation_hook( __FILE__, 'crisFelixWedding_install' );
+
 add_action("wpcf7_before_send_mail", "wpcf7_do_something_else");
 function wpcf7_do_something_else($cf7) {
-    $wpcf7 = WPCF7_ContactForm::get_current();
-    $wpcf7->skip_mail = true;
+    $logger = new Logger('cris-felix-plugin-logger');
+    $logger->pushHandler(new StreamHandler(__DIR__.'/my_app.log', Logger::DEBUG));
+    $logger->pushHandler(new FirePHPHandler());
+
+    $checker = new Checker($logger);
+    $entityGenerator = new EntityGenerator($logger);
+    $guestUploader = new GuestUploader($logger);
+    $obtainer = new Obtainer($logger);
+    $sendMailDatabaseGestor = new SendMailDatabaseGestor($logger);
+    $currentHashForm = getCurrentHashForm();
+    $loader = new Loader($checker, $entityGenerator, $guestUploader, $obtainer, $sendMailDatabaseGestor, $currentHashForm);
+
     try {
-        Loader::loadCustomGuestType();
+        $loader->loadCustomGuestType();
     } catch (Exception $e) {
-        error_log($e->getMessage(), 0);
+        $logger->error($e->getMessage());
     }
 }
+
+function my_skip_mail($f){
+    $logger = new Logger('cris-felix-plugin-logger');
+    $logger->pushHandler(new StreamHandler(__DIR__.'/my_app.log', Logger::DEBUG));
+    $logger->pushHandler(new FirePHPHandler());
+
+    $currentHashForm = getCurrentHashForm();
+    $sendMailDatabaseGestor = new SendMailDatabaseGestor($logger);
+    $sendEmailRegister = ($sendMailDatabaseGestor->obtainSendEmailRegister($currentHashForm)) ? FALSE : TRUE;
+
+    if ($sendEmailRegister){
+        return true; // DO NOT SEND E-MAIL
+    }
+}
+add_filter('wpcf7_skip_mail','my_skip_mail');
 
 function custom_columns($columns)
 {
@@ -101,5 +156,10 @@ function multiValueFieldHandling($multiValueResult) {
     } else {
         return "-";
     }
+}
+
+function getCurrentHashForm() {
+    $formInstance = WPCF7_Submission::get_instance();
+    return $formInstance->get_posted_data_hash();
 }
 

@@ -10,7 +10,14 @@ class GuestUploader
     const POST_STATUS = 'publish';
     const POST_AUTHOR = 1;
 
-    public static function uploadGuest(GuestInterface $guestEntity): GuestInterface
+    private $logger;
+
+    public function __construct($logger)
+    {
+        $this->logger = $logger;
+    }
+
+    public function uploadGuest(GuestInterface $guestEntity)
     {
         $post_id = wp_insert_post(array(
             'post_type' => self::POST_TYPE,
