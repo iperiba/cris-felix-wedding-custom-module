@@ -2,6 +2,8 @@
 
 namespace CrisFelixWeddingCustomModule;
 
+use WPCF7_Submission;
+
 class Loader
 {
     protected $checker;

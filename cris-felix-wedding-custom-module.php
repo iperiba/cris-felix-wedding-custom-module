@@ -52,8 +52,8 @@ function crisFelixWedding_install() {
 
 register_activation_hook( __FILE__, 'crisFelixWedding_install' );
 
-add_action("wpcf7_before_send_mail", "wpcf7_do_something_else");
-function wpcf7_do_something_else($cf7) {
+add_action("wpcf7_before_send_mail", "cris_felix_wedding_custom_module_insert_guest");
+function cris_felix_wedding_custom_module_insert_guest($cf7) {
     $logger = new Logger('cris-felix-plugin-logger');
     $logger->pushHandler(new StreamHandler(__DIR__.'/my_app.log', Logger::DEBUG));
     $logger->pushHandler(new FirePHPHandler());
@@ -73,20 +73,38 @@ function wpcf7_do_something_else($cf7) {
     }
 }
 
-function my_skip_mail($f){
+function cris_felix_wedding_custom_module_avoid_mail($f){
     $logger = new Logger('cris-felix-plugin-logger');
     $logger->pushHandler(new StreamHandler(__DIR__.'/my_app.log', Logger::DEBUG));
     $logger->pushHandler(new FirePHPHandler());
 
     $currentHashForm = getCurrentHashForm();
     $sendMailDatabaseGestor = new SendMailDatabaseGestor($logger);
-    $sendEmailRegister = ($sendMailDatabaseGestor->obtainSendEmailRegister($currentHashForm)) ? FALSE : TRUE;
+    $sendEmailRegister = ($sendMailDatabaseGestor->obtainSendEmailRegister($currentHashForm));
 
-    if ($sendEmailRegister){
+    if (!$sendEmailRegister){
         return true; // DO NOT SEND E-MAIL
     }
 }
-add_filter('wpcf7_skip_mail','my_skip_mail');
+add_filter('wpcf7_skip_mail','cris_felix_wedding_custom_module_avoid_mail');
+
+add_action( 'wpcf7_mail_sent', 'cris_felix_wedding_custom_module_change_response_status', 10, 2 );
+
+function cris_felix_wedding_custom_module_change_response_status($contact_form) {
+    $logger = new Logger('cris-felix-plugin-logger');
+    $logger->pushHandler(new StreamHandler(__DIR__.'/my_app.log', Logger::DEBUG));
+    $logger->pushHandler(new FirePHPHandler());
+
+    $currentHashForm = getCurrentHashForm();
+    $sendMailDatabaseGestor = new SendMailDatabaseGestor($logger);
+    $sendEmailRegister = ($sendMailDatabaseGestor->obtainSendEmailRegister($currentHashForm));
+
+    if (!$sendEmailRegister) {
+        $submission = WPCF7_Submission::get_instance();
+        $submission->set_status("dni_guest_already_registered");
+        $submission->set_response("Guest with submitted DNI already registered");
+    }
+}
 
 function custom_columns($columns)
 {

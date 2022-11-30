@@ -3,6 +3,7 @@
 namespace CrisFelixWeddingCustomModule\Actions\Implementations;
 
 use WP_Query;
+use WPCF7_Submission;
 
 class Checker
 {
@@ -37,13 +38,19 @@ class Checker
         }
 
         if ($alreadyNidPost) {
+            $submission = WPCF7_Submission::get_instance();
+            $submission->add_result_props(array(
+                'status' => 'prueba',
+                'message' => 'prueba'
+            ));
+            //$submission = WPCF7_Submission::get_instance()->set_status('prueba');
             return FALSE;
         }
 
         return TRUE;
     }
 
-    private function alreadyNidPost()
+    public function alreadyNidPost()
     {
         $alreadyNidPost = FALSE;
 
