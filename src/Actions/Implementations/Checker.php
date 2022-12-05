@@ -38,12 +38,6 @@ class Checker
         }
 
         if ($alreadyNidPost) {
-            $submission = WPCF7_Submission::get_instance();
-            $submission->add_result_props(array(
-                'status' => 'prueba',
-                'message' => 'prueba'
-            ));
-            //$submission = WPCF7_Submission::get_instance()->set_status('prueba');
             return FALSE;
         }
 
