@@ -17,6 +17,8 @@ class Obtainer
         "extra_service" => "array",
         "special_requirements" => "textarea",
         "spotify_song" => "url",
+        "spotify_song02" => "url",
+        "spotify_song03" => "url",
     );
 
     const POST_FIELDS_ENTITY_FIELDS = array(
@@ -32,6 +34,8 @@ class Obtainer
         "extra_service" => "extra_service",
         "special_requirements" => "special_requirements",
         "spotify_song" => "spotify_song",
+        "spotify_song02" => "spotify_song02",
+        "spotify_song03" => "spotify_song03",
     );
 
     private $logger;

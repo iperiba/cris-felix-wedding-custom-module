@@ -18,6 +18,8 @@ class Guest implements GuestInterface
 	private array $extra_service;
 	private string $special_requirements;
 	private string $spotify_song;
+    private string $spotify_song02;
+    private string $spotify_song03;
 
     /**
      * Guest constructor.
@@ -33,8 +35,10 @@ class Guest implements GuestInterface
      * @param array $extra_service
      * @param string $special_requirements
      * @param string $spotify_song
+     * @param string $spotify_song02
+     * @param string $spotify_song03
      */
-    public function __construct($guest_name, $surname, $nid, $mail, $phone, array $days, $upper_age, $menu_type, $allergens, array $extra_service, $special_requirements, $spotify_song)
+    public function __construct($guest_name, $surname, $nid, $mail, $phone, $days, $upper_age, $menu_type, $allergens, $extra_service, $special_requirements, $spotify_song, $spotify_song02, $spotify_song03)
     {
         $this->guest_name = $guest_name;
         $this->surname = $surname;
@@ -48,6 +52,8 @@ class Guest implements GuestInterface
         $this->extra_service = $extra_service;
         $this->special_requirements = $special_requirements;
         $this->spotify_song = $spotify_song;
+        $this->spotify_song02 = $spotify_song02;
+        $this->spotify_song03 = $spotify_song03;
     }
 
     /**
@@ -240,5 +246,37 @@ class Guest implements GuestInterface
     public function setSpotifySong($spotify_song)
     {
         $this->spotify_song = $spotify_song;
+    }
+
+    /**
+     * @return string
+     */
+    public function getSpotifySong02()
+    {
+        return $this->spotify_song02;
+    }
+
+    /**
+     * @param string $spotify_song02
+     */
+    public function setSpotifySong02($spotify_song02)
+    {
+        $this->spotify_song02 = $spotify_song02;
+    }
+
+    /**
+     * @return string
+     */
+    public function getSpotifySong03()
+    {
+        return $this->spotify_song03;
+    }
+
+    /**
+     * @param string $spotify_song03
+     */
+    public function setSpotifySong03($spotify_song03)
+    {
+        $this->spotify_song03 = $spotify_song03;
     }
 }

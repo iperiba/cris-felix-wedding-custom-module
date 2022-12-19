@@ -27,7 +27,9 @@ class EntityGenerator
             $postArray["allergens"],
             $postArray["extra_service"],
             $postArray["special_requirements"],
-            $postArray["spotify_song"]
+            $postArray["spotify_song"],
+            $postArray["spotify_song02"],
+            $postArray["spotify_song03"]
         );
     }
 }

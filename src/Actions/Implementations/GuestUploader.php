@@ -39,6 +39,8 @@ class GuestUploader
             add_post_meta($post_id, 'extra_service', $guestEntity->getExtraService());
             add_post_meta($post_id, 'special_requirements', $guestEntity->getSpecialRequirements());
             add_post_meta($post_id, 'spotify_song', $guestEntity->getSpotifySong());
+            add_post_meta($post_id, 'spotify_song02', $guestEntity->getSpotifySong02());
+            add_post_meta($post_id, 'spotify_song03', $guestEntity->getSpotifySong03());
         }
     }
 }
