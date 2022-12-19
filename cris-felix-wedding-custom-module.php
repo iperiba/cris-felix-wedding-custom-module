@@ -24,6 +24,7 @@ use CrisFelixWeddingCustomModule\Actions\Implementations\GuestUploader;
 use CrisFelixWeddingCustomModule\Actions\Implementations\SendMailDatabaseGestor;
 use CrisFelixWeddingCustomModule\Actions\Implementations\SpotifyKeyGetter;
 use CrisFelixWeddingCustomModule\Actions\Implementations\SpotifyRequestHandler;
+use CrisFelixWeddingCustomModule\Actions\Implementations\SpotifyKeyRenewal;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\FirePHPHandler;
@@ -119,6 +120,7 @@ function cris_felix_wedding_custom_module_change_response_status($contact_form) 
     $spotifyKeyGetter = new SpotifyKeyGetter($logger);
     $entityGenerator = new EntityGenerator($logger);
     $guestUploader = new GuestUploader($logger);
+    $spotifyKeyRenewal = new SpotifyKeyRenewal($logger);
 
     $sendEmailRegister = ($sendMailDatabaseGestor->obtainSendEmailRegister($currentHashForm));
 
@@ -128,7 +130,21 @@ function cris_felix_wedding_custom_module_change_response_status($contact_form) 
         $submission->set_response("El dni que ha introducido en el formulario ya se encuentra registrado");
     }
 
-    $spotifyAuthorizationKey = $spotifyKeyGetter->getSpotifyAuthorizationKey();
+    $spotifyAuthorizationKey = "";
+    $spotifyAuthorizationCodeColumnName= 'spotify_authorization';
+    $spotifyDatetimeColumnName = 'spotify_authorization_datetime';
+
+    try {
+        $spotifyAuthorizationResultArray = $spotifyKeyGetter->getSpotifyAuthorizationKeyAndDatetime();
+        $spotifyAuthorizationKey = $spotifyAuthorizationResultArray[$spotifyAuthorizationCodeColumnName];
+        $spotifyAuthorizationDatetime = $spotifyAuthorizationResultArray[$spotifyDatetimeColumnName];
+
+        if (checkCurrentDatetimeGreaterThanSpotifyDatetimeCode($spotifyAuthorizationDatetime)) {
+            $spotifyAuthorizationKey = $spotifyKeyRenewal->renewSpotifyCode();
+        }
+    } catch (Exception $e) {
+        $logger->error($e->getMessage());
+    }
 
     if (!empty($spotifyAuthorizationKey)) {
         $obtainer = new Obtainer($logger);
@@ -142,10 +158,14 @@ function cris_felix_wedding_custom_module_change_response_status($contact_form) 
         //if (!empty($spotifySongsIdArray)) {
             $spotifyApi = new SpotifyWebAPI\SpotifyWebAPI();
             $spotifyApi->setAccessToken($spotifyAuthorizationKey);
+
+        try {
             $prueba = $spotifyApi->addPlaylistTracks(WP_PLAYLIST_ID, [
                 '6ytRc4KTeeOMyM4R2RqCVv'
             ]);
-        //}
+        } catch (Exception $e) {
+            $logger->error($e->getMessage());
+        }
     }
 }
 add_action( 'wpcf7_mail_sent', 'cris_felix_wedding_custom_module_change_response_status', 10, 2 );
@@ -239,5 +259,12 @@ function obtainSpotifySongs($guestEntity) {
 }
 
 function treatSpotifyLinks($originalSpotifyLink) {
+}
+
+function checkCurrentDatetimeGreaterThanSpotifyDatetimeCode($spotifyDatetime) {
+    $datetimeNow = time();
+    $convertedSpotifyDatetime = strtotime($spotifyDatetime)+3600;
+
+    return $datetimeNow > $convertedSpotifyDatetime;
 }
 

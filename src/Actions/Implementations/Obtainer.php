@@ -38,6 +38,8 @@ class Obtainer
         "spotify_song03" => "spotify_song03",
     );
 
+    const FIELDS_IF_NOT_FILLED_DO_NOT_EXIST = array("extra_service");
+
     private $logger;
 
     public function __construct($logger)
@@ -50,6 +52,12 @@ class Obtainer
         $postArray = array();
 
         foreach (self::POST_FIELDS_ENTITY_FIELDS as $key => $value) {
+            if (in_array($key, self::FIELDS_IF_NOT_FILLED_DO_NOT_EXIST)) {
+                if (self::POST_FIELDS_TYPE_FIELD[$key] === "array") {
+                    $_POST[$key] = array();
+                }
+            }
+
             if (is_null($nonTreatedPostValue = $_POST[$key])) {
                 $this->logger->error(__FILE__ . ": custom error -> $key is missing from the compulsory array");
                 continue;

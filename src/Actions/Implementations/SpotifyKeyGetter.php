@@ -14,12 +14,12 @@ class SpotifyKeyGetter
         $this->logger = $logger;
     }
 
-    public function getSpotifyAuthorizationKey()
+    public function getSpotifyAuthorizationKeyAndDatetime()
     {
         global $wpdb;
         $table_name = $wpdb->prefix . self::SPOTIFY_TABLE_NAME;
 
-        $query = "SELECT " . self::SPOTIFY_AUTHORIZATION_COLUMN . " FROM $table_name ORDER BY " .
+        $query = "SELECT * FROM $table_name ORDER BY " .
             self::SPOTIFY_AUTHORIZATION_DATETIME_COLUMN . " DESC LIMIT 1";
 
         $resultsArray = $wpdb->get_results( $query, ARRAY_A);
@@ -27,13 +27,15 @@ class SpotifyKeyGetter
         if (!is_null($resultsArray) && is_array($resultsArray) && !empty($resultsArray)) {
             $countResults = count($resultsArray);
             $selectedResult = $resultsArray[$countResults-1];
-            $spotifyAuthorizationCode = $selectedResult[self::SPOTIFY_AUTHORIZATION_COLUMN];
+            return $selectedResult;
         } else {
-            $spotifyAuthorizationCode = "";
-            $this->logger->error(__FILE__ . ": custom error -> spotify key could not be retrieved");
+            throw new \Exception(__FILE__ . ": custom error -> spotify key could not be retrieved");
         }
+    }
 
-        return $spotifyAuthorizationCode;
+    public function renewSpotifyApi()
+    {
+
     }
 }
 
