@@ -22,7 +22,7 @@ use CrisFelixWeddingCustomModule\Actions\Implementations\Checker;
 use CrisFelixWeddingCustomModule\Actions\Implementations\EntityGenerator;
 use CrisFelixWeddingCustomModule\Actions\Implementations\GuestUploader;
 use CrisFelixWeddingCustomModule\Actions\Implementations\SendMailDatabaseGestor;
-use CrisFelixWeddingCustomModule\Actions\Implementations\SpotifyKeyGetter;
+use CrisFelixWeddingCustomModule\Actions\Implementations\SpotifyKeyHandler;
 use CrisFelixWeddingCustomModule\Actions\Implementations\SpotifyRequestHandler;
 use CrisFelixWeddingCustomModule\Actions\Implementations\SpotifyKeyRenewal;
 use Monolog\Logger;
@@ -30,9 +30,10 @@ use Monolog\Handler\StreamHandler;
 use Monolog\Handler\FirePHPHandler;
 
 global $cris_felix_wedding_db_version;
-$cris_felix_wedding_db_version = '1.1';
+$cris_felix_wedding_db_version = '1.2';
 
-function crisFelixWedding_install() {
+function crisFelixWedding_install()
+{
     global $wpdb;
     global $cris_felix_wedding_db_version;
 
@@ -47,7 +48,7 @@ function crisFelixWedding_install() {
 	) $charset_collate;";
 
     require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-    dbDelta( $sql );
+    dbDelta($sql);
 
 
     $table_name = $wpdb->prefix . 'spotify_authorization';
@@ -56,27 +57,32 @@ function crisFelixWedding_install() {
     $sql = "CREATE TABLE $table_name (
 		id mediumint(9) unsigned NOT NULL AUTO_INCREMENT,
 		spotify_authorization TEXT NOT NULL,
+		spotify_authorization_refresh TEXT NOT NULL,
 		spotify_authorization_datetime DATETIME DEFAULT CURRENT_TIMESTAMP,
 		PRIMARY KEY (id)
 	) $charset_collate;";
 
-    dbDelta( $sql );
+    dbDelta($sql);
 
-    add_option( 'cris_felix_wedding_db_version', $cris_felix_wedding_db_version );
+    add_option('cris_felix_wedding_db_version', $cris_felix_wedding_db_version);
 }
-register_activation_hook( __FILE__, 'crisFelixWedding_install' );
 
-function cris_felix_wedding_custom_module_update_db_check() {
+register_activation_hook(__FILE__, 'crisFelixWedding_install');
+
+function cris_felix_wedding_custom_module_update_db_check()
+{
     global $cris_felix_wedding_db_version;
-    if ( get_site_option( 'cris_felix_wedding_db_version' ) != $cris_felix_wedding_db_version) {
+    if (get_site_option('cris_felix_wedding_db_version') != $cris_felix_wedding_db_version) {
         crisFelixWedding_install();
     }
 }
-add_action( 'plugins_loaded', 'cris_felix_wedding_custom_module_update_db_check' );
 
-function cris_felix_wedding_custom_module_insert_guest($cf7) {
+add_action('plugins_loaded', 'cris_felix_wedding_custom_module_update_db_check');
+
+function cris_felix_wedding_custom_module_insert_guest($cf7)
+{
     $logger = new Logger('cris-felix-plugin-logger');
-    $logger->pushHandler(new StreamHandler(__DIR__.'/my_app.log', Logger::DEBUG));
+    $logger->pushHandler(new StreamHandler(__DIR__ . '/my_app.log', Logger::DEBUG));
     $logger->pushHandler(new FirePHPHandler());
 
     $checker = new Checker($logger);
@@ -93,34 +99,34 @@ function cris_felix_wedding_custom_module_insert_guest($cf7) {
         $logger->error($e->getMessage());
     }
 }
+
 add_action("wpcf7_before_send_mail", "cris_felix_wedding_custom_module_insert_guest");
 
-function cris_felix_wedding_custom_module_avoid_mail($f){
+function cris_felix_wedding_custom_module_avoid_mail($f)
+{
     $logger = new Logger('cris-felix-plugin-logger');
-    $logger->pushHandler(new StreamHandler(__DIR__.'/my_app.log', Logger::DEBUG));
+    $logger->pushHandler(new StreamHandler(__DIR__ . '/my_app.log', Logger::DEBUG));
     $logger->pushHandler(new FirePHPHandler());
 
     $currentHashForm = getCurrentHashForm();
     $sendMailDatabaseGestor = new SendMailDatabaseGestor($logger);
     $sendEmailRegister = ($sendMailDatabaseGestor->obtainSendEmailRegister($currentHashForm));
 
-    if (!$sendEmailRegister){
+    if (!$sendEmailRegister) {
         return true; // DO NOT SEND E-MAIL
     }
 }
-add_filter('wpcf7_skip_mail','cris_felix_wedding_custom_module_avoid_mail');
 
-function cris_felix_wedding_custom_module_change_response_status($contact_form) {
+add_filter('wpcf7_skip_mail', 'cris_felix_wedding_custom_module_avoid_mail');
+
+function cris_felix_wedding_custom_module_change_response_status($contact_form)
+{
     $logger = new Logger('cris-felix-plugin-logger');
-    $logger->pushHandler(new StreamHandler(__DIR__.'/my_app.log', Logger::DEBUG));
+    $logger->pushHandler(new StreamHandler(__DIR__ . '/my_app.log', Logger::DEBUG));
     $logger->pushHandler(new FirePHPHandler());
 
     $currentHashForm = getCurrentHashForm();
     $sendMailDatabaseGestor = new SendMailDatabaseGestor($logger);
-    $spotifyKeyGetter = new SpotifyKeyGetter($logger);
-    $entityGenerator = new EntityGenerator($logger);
-    $guestUploader = new GuestUploader($logger);
-    $spotifyKeyRenewal = new SpotifyKeyRenewal($logger);
 
     $sendEmailRegister = ($sendMailDatabaseGestor->obtainSendEmailRegister($currentHashForm));
 
@@ -129,46 +135,62 @@ function cris_felix_wedding_custom_module_change_response_status($contact_form) 
         $submission->set_status("dni_guest_already_registered");
         $submission->set_response("El dni que ha introducido en el formulario ya se encuentra registrado");
     }
+}
 
-    $spotifyAuthorizationKey = "";
-    $spotifyAuthorizationCodeColumnName= 'spotify_authorization';
-    $spotifyDatetimeColumnName = 'spotify_authorization_datetime';
+add_action('wpcf7_mail_sent', 'cris_felix_wedding_custom_module_change_response_status', 10, 2);
 
-    try {
-        $spotifyAuthorizationResultArray = $spotifyKeyGetter->getSpotifyAuthorizationKeyAndDatetime();
-        $spotifyAuthorizationKey = $spotifyAuthorizationResultArray[$spotifyAuthorizationCodeColumnName];
-        $spotifyAuthorizationDatetime = $spotifyAuthorizationResultArray[$spotifyDatetimeColumnName];
+function cris_felix_wedding_custom_module_add_song_spotify_list($contact_form)
+{
+    $logger = new Logger('cris-felix-plugin-logger');
+    $logger->pushHandler(new StreamHandler(__DIR__ . '/my_app.log', Logger::DEBUG));
+    $logger->pushHandler(new FirePHPHandler());
 
-        if (checkCurrentDatetimeGreaterThanSpotifyDatetimeCode($spotifyAuthorizationDatetime)) {
-            $spotifyAuthorizationKey = $spotifyKeyRenewal->renewSpotifyCode();
-        }
-    } catch (Exception $e) {
-        $logger->error($e->getMessage());
+    $spotifyKeyHandler = new SpotifyKeyHandler($logger);
+    $obtainer = new Obtainer($logger);
+    $entityGenerator = new EntityGenerator($logger);
+
+    $spotifyIdSongsForm = obtainSpotifySongs($obtainer, $entityGenerator);
+
+    if (empty($spotifyIdSongsForm)) {
+        return;
     }
 
-    if (!empty($spotifyAuthorizationKey)) {
-        $obtainer = new Obtainer($logger);
-        $entityGenerator = new EntityGenerator($logger);
+    try {
+        $spotifyApiObject = obtainSpotifyApiObject($spotifyKeyHandler);
+    } catch (Exception $e) {
+        $logger->error($e->getMessage());
+        return;
+    }
 
-        $arrayFromPost = $obtainer->obtainArrayFromPostPetition();
-        $guestEntity = $entityGenerator->generateGuestEntity($arrayFromPost);
+    try {
+        $playlistTracks = $spotifyApiObject->getPlaylistTracks(WP_PLAYLIST_ID);
+    } catch (Exception $e) {
+        $logger->error(__FILE__ . ": " . $e->getMessage());
+        $submission = WPCF7_Submission::get_instance();
+        $submission->set_status("error_uploading_songs");
+        $submission->set_response("No se han podido añadir correctamente sus canciones");
+        return;
+    }
 
-        //$spotifySongsIdArray = obtainSpotifySongs($guestEntity);
-
-        //if (!empty($spotifySongsIdArray)) {
-            $spotifyApi = new SpotifyWebAPI\SpotifyWebAPI();
-            $spotifyApi->setAccessToken($spotifyAuthorizationKey);
-
-        try {
-            $prueba = $spotifyApi->addPlaylistTracks(WP_PLAYLIST_ID, [
-                '6ytRc4KTeeOMyM4R2RqCVv'
-            ]);
-        } catch (Exception $e) {
-            $logger->error($e->getMessage());
+    foreach ($spotifyIdSongsForm as $spotifyIdSongForm) {
+        if (!alreadyAddedSpotifySong($spotifyIdSongForm, $playlistTracks)) {
+            try {
+                $spotifyApiObject->addPlaylistTracks(WP_PLAYLIST_ID, [
+                    $spotifyIdSongForm
+                ]);
+            } catch (Exception $e) {
+                $logger->error(__FILE__ . ": " . $e->getMessage());
+                $submission = WPCF7_Submission::get_instance();
+                $submission->set_status("error_uploading_songs");
+                $submission->set_response("No se han podido añadir correctamente sus canciones");
+                break;
+            }
         }
     }
 }
-add_action( 'wpcf7_mail_sent', 'cris_felix_wedding_custom_module_change_response_status', 10, 2 );
+
+add_action('wpcf7_mail_sent', 'cris_felix_wedding_custom_module_add_song_spotify_list', 10, 2);
+
 
 function custom_columns($columns)
 {
@@ -189,6 +211,7 @@ function custom_columns($columns)
         )
     );
 }
+
 add_filter('manage_guest_posts_columns', 'custom_columns');
 
 function display_custom_columns($column, $post_id)
@@ -210,25 +233,27 @@ function display_custom_columns($column, $post_id)
             echo get_post_meta($post_id, 'phone', true);
             break;
         case 'days':
-            $days =  get_post_meta($post_id, 'days', true);
+            $days = get_post_meta($post_id, 'days', true);
             echo multiValueFieldHandling($days);
             break;
         case 'upper_age':
-            echo (get_post_meta($post_id, 'upper_age', true))? "Sí" : "No";
+            echo (get_post_meta($post_id, 'upper_age', true)) ? "Sí" : "No";
             break;
         case 'menu_type':
-            $menu_type =  get_post_meta($post_id, 'menu_type', true);
+            $menu_type = get_post_meta($post_id, 'menu_type', true);
             echo multiValueFieldHandling($menu_type);
             break;
         case 'extra_service':
-            $extraService =  get_post_meta($post_id, 'extra_service', true);
+            $extraService = get_post_meta($post_id, 'extra_service', true);
             echo multiValueFieldHandling($extraService);
             break;
     }
 }
+
 add_action('manage_guest_posts_custom_column', 'display_custom_columns', 10, 2);
 
-function multiValueFieldHandling($multiValueResult) {
+function multiValueFieldHandling($multiValueResult)
+{
     if (!empty($multiValueResult)) {
         if (is_array($multiValueResult)) {
             return implode(", ", $multiValueResult);
@@ -240,31 +265,111 @@ function multiValueFieldHandling($multiValueResult) {
     }
 }
 
-function getCurrentHashForm() {
+function getCurrentHashForm()
+{
     $formInstance = WPCF7_Submission::get_instance();
     return $formInstance->get_posted_data_hash();
 }
 
-function obtainSpotifySongs($guestEntity) {
-    $spotifySongsIdArray = array();
+function obtainSpotifySongs($obtainer, $entityGenerator)
+{
+    $spotifyIdSongsForm = array();
     $functions = array('getSpotifySong', 'getSpotifySong02', 'getSpotifySong03');
+
+    $arrayFromPost = $obtainer->obtainArrayFromPostPetition();
+    $guestEntity = $entityGenerator->generateGuestEntity($arrayFromPost);
+
     foreach ($functions as $function) {
         $originalUrlSong = $guestEntity->$function();
         if (!empty($originalUrlSong)) {
             $treatedUrlSong = treatSpotifyLinks($originalUrlSong);
-            array_push($spotifySongsIdArray, $treatedUrlSong);
+            if (!in_array($treatedUrlSong, $spotifyIdSongsForm)) {
+                array_push($spotifyIdSongsForm, $treatedUrlSong);
+            }
         }
     }
-    return array();
+
+    return $spotifyIdSongsForm;
 }
 
-function treatSpotifyLinks($originalSpotifyLink) {
+function treatSpotifyLinks($originalSpotifyLink)
+{
+    return get_string_between($originalSpotifyLink, "track/", "?");
 }
 
-function checkCurrentDatetimeGreaterThanSpotifyDatetimeCode($spotifyDatetime) {
+function checkCurrentDatetimeGreaterThanSpotifyDatetimeCode($spotifyDatetime)
+{
     $datetimeNow = time();
-    $convertedSpotifyDatetime = strtotime($spotifyDatetime)+3600;
+    $convertedSpotifyDatetime = strtotime($spotifyDatetime) + WP_SECONDS_SPOTIFY_RENEWAL;
 
     return $datetimeNow > $convertedSpotifyDatetime;
 }
 
+function obtainSpotifyApiObject($spotifyKeyGetter)
+{
+    $spotifyAuthorizationCodeColumnName = 'spotify_authorization';
+    $spotifyRefreshCodeColumnName = 'spotify_authorization_refresh';
+
+    try {
+        $spotifyAuthorizationResultArray = $spotifyKeyGetter->getSpotifyAuthorizationKeyAndDatetime();
+    } catch (Exception $e) {
+        throw new Exception($e->getMessage());
+    }
+
+    $spotifyAuthorizationKey = $spotifyAuthorizationResultArray[$spotifyAuthorizationCodeColumnName];
+    $spotifyAuthorizationRefreshKey = $spotifyAuthorizationResultArray[$spotifyRefreshCodeColumnName];
+
+    $session = new SpotifyWebAPI\Session(
+        WP_SPOTIFY_ID,
+        WP_SPOTIFY_PASS
+    );
+
+    if ($spotifyAuthorizationKey) {
+        $session->setAccessToken($spotifyAuthorizationKey);
+        $session->setRefreshToken($spotifyAuthorizationRefreshKey);
+    } else {
+        // Or request a new access token
+        $session->refreshAccessToken($spotifyAuthorizationRefreshKey);
+    }
+
+    $options = [
+        'auto_refresh' => true,
+    ];
+
+    $api = new SpotifyWebAPI\SpotifyWebAPI($options, $session);
+    $api->setSession($session);
+
+    $newAccessToken = $session->getAccessToken();
+    $newRefreshToken = $session->getRefreshToken();
+
+    try {
+        $spotifyKeyGetter->storeSpotifyCredentials($newAccessToken, $newRefreshToken);
+    } catch (\Exception $e) {
+        throw new \Exception($e->getMessage());
+    }
+
+    return $api;
+}
+
+function get_string_between($string, $start, $end)
+{
+    $string = ' ' . $string;
+    $ini = strpos($string, $start);
+    if ($ini == 0) return '';
+    $ini += strlen($start);
+    $len = strpos($string, $end, $ini) - $ini;
+    return substr($string, $ini, $len);
+}
+
+function alreadyAddedSpotifySong($spotifyIdSongForm, $playlistTracks)
+{
+    $result = false;
+    foreach ($playlistTracks->items as $playlistSong) {
+        if ($playlistSong->track->id === "$spotifyIdSongForm") {
+            $result = true;
+            break;
+        }
+    }
+
+    return $result;
+}
