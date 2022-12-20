@@ -364,10 +364,13 @@ function get_string_between($string, $start, $end)
 function alreadyAddedSpotifySong($spotifyIdSongForm, $playlistTracks)
 {
     $result = false;
-    foreach ($playlistTracks->items as $playlistSong) {
-        if ($playlistSong->track->id === "$spotifyIdSongForm") {
-            $result = true;
-            break;
+
+    if (!empty($playlistTracks)) {
+        foreach ($playlistTracks->items as $playlistSong) {
+            if ($playlistSong->track->id === "$spotifyIdSongForm") {
+                $result = true;
+                break;
+            }
         }
     }
 
