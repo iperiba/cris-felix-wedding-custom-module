@@ -167,8 +167,8 @@ function cris_felix_wedding_custom_module_add_song_spotify_list($contact_form)
     } catch (Exception $e) {
         $logger->error(__FILE__ . ": " . $e->getMessage());
         $submission = WPCF7_Submission::get_instance();
-        $submission->set_status("error_uploading_songs");
-        $submission->set_response("No se han podido añadir correctamente sus canciones");
+        $submission->set_status("error_retrieving_playListtrack");
+        $submission->set_response("error_retrieving_playListtrack: no se han podido añadir correctamente sus canciones");
         return;
     }
 
@@ -182,7 +182,7 @@ function cris_felix_wedding_custom_module_add_song_spotify_list($contact_form)
                 $logger->error(__FILE__ . ": " . $e->getMessage());
                 $submission = WPCF7_Submission::get_instance();
                 $submission->set_status("error_uploading_songs");
-                $submission->set_response("No se han podido añadir correctamente sus canciones");
+                $submission->set_response("error_uploading_songs: no se han podido añadir correctamente sus canciones");
                 break;
             }
         }
