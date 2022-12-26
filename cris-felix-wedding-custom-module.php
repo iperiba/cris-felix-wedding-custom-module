@@ -281,8 +281,9 @@ function obtainSpotifySongs($obtainer, $entityGenerator)
 
     foreach ($functions as $function) {
         $originalUrlSong = $guestEntity->$function();
-        if (!empty($originalUrlSong)) {
+        if (!empty($originalUrlSong) && str_starts_with($originalUrlSong, "https://open.spotify.com/track/")) {
             $treatedUrlSong = treatSpotifyLinks($originalUrlSong);
+
             if (!in_array($treatedUrlSong, $spotifyIdSongsForm)) {
                 array_push($spotifyIdSongsForm, $treatedUrlSong);
             }
@@ -292,9 +293,17 @@ function obtainSpotifySongs($obtainer, $entityGenerator)
     return $spotifyIdSongsForm;
 }
 
+function spotifyLinkContainsIdSession($originalSpotifyLink) {
+    return str_contains($originalSpotifyLink, '?');
+}
+
 function treatSpotifyLinks($originalSpotifyLink)
 {
-    return get_string_between($originalSpotifyLink, "track/", "?");
+    if (spotifyLinkContainsIdSession($originalSpotifyLink)) {
+        return get_string_between($originalSpotifyLink, "track/", "?");
+    } else {
+        return substr($originalSpotifyLink, strrpos($originalSpotifyLink, "track/") + strlen("track/"));
+    }
 }
 
 function checkCurrentDatetimeGreaterThanSpotifyDatetimeCode($spotifyDatetime)
