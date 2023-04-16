@@ -30,29 +30,31 @@ use Monolog\Handler\StreamHandler;
 use Monolog\Handler\FirePHPHandler;
 
 global $cris_felix_wedding_db_version;
-$cris_felix_wedding_db_version = '1.2';
+$cris_felix_wedding_db_version = '1.4';
 
 function crisFelixWedding_install()
 {
     global $wpdb;
     global $cris_felix_wedding_db_version;
-
-    $table_name = $wpdb->prefix . 'send_email';
+    require_once ABSPATH . 'wp-admin/includes/upgrade.php';
     $charset_collate = $wpdb->get_charset_collate();
+
+    $table_name = $wpdb->prefix . 'check_in_confirmation_email_sent';
 
     $sql = "CREATE TABLE $table_name (
 		id mediumint(9) unsigned NOT NULL AUTO_INCREMENT,
-		form_instance_hash varchar(40) NOT NULL,
-		send_email BOOLEAN NOT NULL DEFAULT 1,
-		PRIMARY KEY  (id)
+		mail VARCHAR(300) NOT NULL,
+		name VARCHAR(200) NOT NULL,
+		surname VARCHAR(700) NOT NULL,
+		id_custom_post mediumint(9) NOT NULL,
+		sent BOOLEAN DEFAULT 0 NOT NULL,
+		datetime_sent DATETIME DEFAULT CURRENT_TIMESTAMP,
+		PRIMARY KEY (id)
 	) $charset_collate;";
 
-    require_once ABSPATH . 'wp-admin/includes/upgrade.php';
     dbDelta($sql);
 
-
     $table_name = $wpdb->prefix . 'spotify_authorization';
-    $charset_collate = $wpdb->get_charset_collate();
 
     $sql = "CREATE TABLE $table_name (
 		id mediumint(9) unsigned NOT NULL AUTO_INCREMENT,
@@ -385,3 +387,208 @@ function alreadyAddedSpotifySong($spotifyIdSongForm, $playlistTracks)
 
     return $result;
 }
+
+add_action( 'admin_menu', 'send_emails_page' );
+function send_emails_page() {
+    $hookName =  add_menu_page(
+        'Send email to guests',
+        'Email guests',
+        'manage_options',
+        'email_guests',
+        'send_emails_page_html',
+        plugin_dir_url(__FILE__) . 'images/mail.png',
+        30
+    );
+
+    add_action( 'load-' . $hookName, 'email_guests_page_submit' );
+}
+
+function send_emails_page_html() {
+    global $wpdb;
+    $logger = new Logger('cris-felix-plugin-logger');
+    $logger->pushHandler(new StreamHandler(__DIR__ . '/my_app.log', Logger::DEBUG));
+    $logger->pushHandler(new FirePHPHandler());
+    $guestTableName = $wpdb->prefix . 'posts';
+    $checkInMailTableName = $wpdb->prefix . 'check_in_confirmation_email_sent';
+    $postType = 'guest';
+
+    ?>
+        <h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
+    <?php
+
+    $query = "SELECT A.ID 
+    FROM " . $guestTableName . " A 
+    LEFT JOIN " . $checkInMailTableName . " B 
+    ON A.ID = B.id_custom_post 
+    WHERE A.post_type = '" . $postType . "' 
+    AND B.id_custom_post IS NULL";
+
+    try {
+        $guests = $wpdb->get_results($query, ARRAY_N);
+    } catch (Exception $e) {
+        $logger->error($e->getMessage());
+        return;
+    }
+
+    if (empty($guests)) {
+        echo '<div class="updated"><p>' . __('No pending guest emails to be sent') . '</p></div>';
+        return;
+    }
+
+    if (isset($_GET['saved'])) {
+        if ($_GET['saved']) {
+            echo '<div class="updated"><p>' . __('Success! Emails were sent') . '</p></div>';
+        } else {
+            echo '<div class="error"><p>' . __('There were some errores. Check the logs') . '</p></div>';
+        }
+    }
+
+    ?>
+    <div class="wrap">
+        <div class="select-deselect_buttons-block">
+            <button id="guest-email-select-all-button" type="button">Select all</button>
+            <button id="guest-email-deselect-all-button" type="button">Remove selection</button>
+        </div>
+        <div class="select-email-guests-form">
+            <form action="<?php menu_page_url('email_guests') ?>" method="post">
+                <fieldset>
+                    <div class="select-email-guests-legend">
+                        <legend>Choose guests to send them an email:</legend>
+                    </div>
+                    <?php
+                        foreach ($guests as $guest) {
+                            $guestId = $guest[0];
+                            $guestEmail = get_post_meta( $guestId, 'email', true);
+                            $guestName = get_post_meta( $guestId, 'guest_name', true);
+                            $guestSurname = get_post_meta( $guestId, 'surname', true);
+                            if (empty($guestEmail)) {
+                                continue;
+                            }
+                    ?>
+                        <div class="select-email-guests-option_block">
+                            <input class="guest-email-input" type="checkbox" name="guests_to_send_email[]" value="<?php echo $guestId ?>" />
+                            <?php echo $guestName . " " . $guestSurname . " - " . $guestEmail ?>
+                            <br>
+                        </div>
+                    <?php
+                        }
+                    ?>
+                    <input type="submit" value="Send email" />
+                </fieldset>
+            </form>
+        </div>
+    </div>
+    <?php
+}
+
+function email_guests_page_submit() {
+    global $wpdb;
+    $logger = new Logger('cris-felix-plugin-logger');
+    $logger->pushHandler(new StreamHandler(__DIR__ . '/my_app.log', Logger::DEBUG));
+    $logger->pushHandler(new FirePHPHandler());
+    $table_name = $wpdb->prefix . 'check_in_confirmation_email_sent';
+    $insertValuesArray = array();
+    $somethingHasFailed = FALSE;
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        return;
+    }
+
+    if (!array_key_exists('guests_to_send_email', $_POST)) {
+        return;
+    }
+
+    if (empty($guestIdArray = $_POST['guests_to_send_email'])) {
+        return;
+    }
+
+    $batch_of = 10;
+    $batch = array_chunk($guestIdArray, $batch_of);
+
+    foreach($batch as $b) {
+        $args = array(
+            'post_type' => 'guest',
+            'post__in' => $b
+        );
+
+        $guestsArray = get_posts($args);
+
+        foreach ($guestsArray as $guest) {
+            $guestId = $guest->ID;
+            $guestEmail = str_replace(array('\'', '"'), '',  sanitize_email(get_post_meta( $guestId, 'email', true)));
+            $guestName = str_replace(array('\'', '"'), '',  sanitize_text_field(get_post_meta( $guestId, 'guest_name', true)));
+            $guestSurname = str_replace(array('\'', '"'), '',  sanitize_text_field(get_post_meta( $guestId, 'surname', true)));
+
+            $to = $guestEmail;
+            $subject = 'check-in Cris&Felix boda';
+
+            $tpl = file_get_contents(__DIR__ . '/template/email_template.html');
+            $tpl = str_replace('{{guestName}}', totitle($guestName), $tpl);
+
+            $headers = array('Content-Type: text/html; charset=UTF-8');
+
+            try {
+                $emailSentResult = wp_mail( $to, $subject, $tpl, $headers );
+            } catch (Exception $e) {
+                $somethingHasFailed = TRUE;
+                $logger->error($e->getMessage());
+                continue;
+            }
+
+            if ($emailSentResult) {
+                $insertValuesArray[] = array($guestEmail, $guestName, $guestSurname, $guestId, TRUE);
+            }
+        }
+
+        if (empty($insertValuesArray)) {
+            continue;
+        }
+
+        $valueText = "('";
+
+        foreach ($insertValuesArray as $key => $element) {
+            $valueText .= implode("', '", $element);
+
+            if ($key === array_key_last($insertValuesArray)) {
+                $valueText .= "')";
+            } else {
+                $valueText .= "'),('";
+            }
+        }
+
+        $query = "INSERT INTO " . $table_name . " (mail, name, surname, id_custom_post, sent) VALUES " . $valueText;
+
+        try {
+            //$wpdb->query($query);
+        } catch (Exception $e) {
+            $somethingHasFailed = TRUE;
+            $logger->error($e->getMessage());
+            continue;
+        }
+    }
+
+    $redirectUrl = menu_page_url('email_guests');
+
+    if ($somethingHasFailed) {
+        $redirectUrl .= '&saved=0';
+    } else {
+        $redirectUrl .= '&saved=1';
+    }
+
+    wp_redirect($redirectUrl);
+    exit;
+}
+
+if ( !function_exists( 'custom_module_enqueue_js_scripts' ) ) {
+    $prueba = plugin_dir_url(__FILE__);
+    function custom_module_enqueue_js_scripts() {
+        wp_enqueue_script( 'custom-module-js', plugin_dir_url(__FILE__) . '/assets/js/custom.js', array( 'jquery' ), false, true );
+    }
+
+    add_action( 'admin_enqueue_scripts', 'custom_module_enqueue_js_scripts' );
+}
+
+function totitle($string){
+    return ucfirst(strtolower($string));
+}
+
